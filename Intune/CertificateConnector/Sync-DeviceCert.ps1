@@ -17,9 +17,9 @@
     DeviceManagementManagedDevices.Read.All
 
 .NOTES
-    File Name      : CertSync-Device.ps1
+    File Name      : Sync-DeviceCert.ps1
     Version        : 1.0
-    Author         : Tobias Schüle
+    Author         : Tobias Schüle - https://justinn.io
     Prerequisite   : Windows PowerShell v5.x,  WindowsAutoPilotIntune, PSPKI
 #>
 

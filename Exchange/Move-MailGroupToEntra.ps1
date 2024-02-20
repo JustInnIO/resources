@@ -6,9 +6,9 @@
     If the export to CSV does not work, the script stops. The script also logs if the AD Sync was disabled, if the group was created in Exchange Online and if the additional email addresses were added to the group.
     The script is used to migrate mail enabled groups from on-premises to Exchange Online.
 .NOTES
-    File Name      : Migrate-MailGroup.ps1
+    File Name      : Move-MailGroupToEntra.ps1
     Version        : 1.0
-    Author         : Tobias Schüle
+    Author         : Tobias Schüle - https://justinn.io
     Prerequisite   : Windows PowerShell v5.x, Exchange Online PowerShell Module
 #>
 

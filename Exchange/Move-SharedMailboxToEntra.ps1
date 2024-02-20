@@ -5,9 +5,9 @@
     This script disables AD Sync for shared mailboxes, restores deleted mailboxes and sets the immutable ID to null.
     The script can be run with the -TestEmail parameter to only test one mailbox.
 .NOTES
-    File Name      : Migrate-SharedMailbox.ps1
+    File Name      : Move-SharedMailboxToEntra.ps1
     Version        : 1.0
-    Author         : Tobias Schüle
+    Author         : Tobias Schüle - https://justinn.io
     Prerequisite   : Windows PowerShell v5.x, Exchange Online PowerShell Module
 #>
 

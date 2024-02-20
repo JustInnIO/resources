@@ -12,7 +12,7 @@
     Install-Module PSPKI -Scope AllUsers -Force -AllowClobber
 
 .NOTES
-    File Name      : Migrate-SharedMailbox.ps1
+    File Name      : Sync-UserCert.ps1
     Version        : 1.0
     Author         : Tobias Schüle
     Prerequisite   : Windows PowerShell v5.x, PSPKI
