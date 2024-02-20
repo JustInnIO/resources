@@ -7,13 +7,14 @@
     The script is used to migrate mail enabled groups from on-premises to Exchange Online.
 .NOTES
     File Name      : Migrate-MailGroup.ps1
+    Version        : 1.0
     Author         : Tobias Schüle
     Prerequisite   : Windows PowerShell v5.x, Exchange Online PowerShell Module
 #>
 
 #region Initalize
 # Define Email Address of mail resource to test with one object
-$TestEmail = "sharedtest@justinn.io"
+$TestEmail = "grouptest@justinn.io"
 # Define the EntraConnect server
 $EntraConnectServer = "entraconnect.justinn.io"
 # Define the attribute and value to disable AD Sync

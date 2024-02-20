@@ -1,4 +1,3 @@
-
 <# 
 .SYNOPSIS
     Script to connect to AzureAD and pull all Autopilot devcies and create 'dummy' computer objects in specified OU

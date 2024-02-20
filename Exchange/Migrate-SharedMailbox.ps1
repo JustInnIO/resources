@@ -6,6 +6,7 @@
     The script can be run with the -TestEmail parameter to only test one mailbox.
 .NOTES
     File Name      : Migrate-SharedMailbox.ps1
+    Version        : 1.0
     Author         : Tobias Schüle
     Prerequisite   : Windows PowerShell v5.x, Exchange Online PowerShell Module
 #>
