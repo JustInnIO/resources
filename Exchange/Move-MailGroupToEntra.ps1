@@ -11,62 +11,69 @@
     Author         : Tobias Schüle - https://justinn.io
     Prerequisite   : Windows PowerShell v5.x, Exchange Online PowerShell Module
 #>
-
+ 
 #region Initalize
 # Define Email Address of mail resource to test with one object
-$TestEmail = "grouptest@justinn.io"
+$TestEmail = "DoNotUse"
 # Define the EntraConnect server
 $EntraConnectServer = "entraconnect.justinn.io"
 # Define the attribute and value to disable AD Sync
 $NoSyncAttribute = "extensionAttribute15"
 $NoSyncValue = "NoSync"
+ 
+# Which group types to migrate
+# MailUniversalDistributionGroup, MailUniversalSecurityGroup
+$RecipientTypeDetails = "MailUniversalSecurityGroup"
 
+# Default Managed By
+$DefaultManagedBy = "ManagedBy"
+ 
 # Install required modules if not installed
 if (-not (Get-Module -Name ExchangeOnlineManagement -ListAvailable)) {
     Install-Module -Name ExchangeOnlineManagement -Force -AcceptLicense -AllowClobber
 }
 #endregion
-
-
+ 
+ 
 #region Program
 # Connecting to Exchange
 Connect-ExchangeOnline
-
+ 
 # If Email Address is set, then only the group with the email address will be migrated
-
-
+ 
+ 
 Write-Output "Getting mail enabled groups in Exchange Online..."
 # Getting all synced mail groups
-
+ 
 if ($TestEmail -match "@") {
     # TEST One Mailbox
-    $GroupsRaw = Get-DistributionGroup | Select-Object * | Where-Object { $_.IsDirSynced -eq $true -and $_.RecipientTypeDetails -match "MailUniversal" } | Where-Object { $_.PrimarySmtpAddress -eq $TestEmail }
+    $GroupsRaw = Get-DistributionGroup -ResultSize Unlimited | Select-Object * | Where-Object { $_.IsDirSynced -eq $true -and $_.RecipientTypeDetails -match "$RecipientTypeDetails" } | Where-Object { $_.PrimarySmtpAddress -eq $TestEmail }
 }
 else {
     # PROD
-    $GroupsRaw = Get-DistributionGroup | Select-Object * | Where-Object { $_.IsDirSynced -eq $true -and $_.RecipientTypeDetails -match "MailUniversal" }
+    $GroupsRaw = Get-DistributionGroup -ResultSize Unlimited | Select-Object * | Where-Object { $_.IsDirSynced -eq $true -and $_.RecipientTypeDetails -match "$RecipientTypeDetails" } 
 }
-
+ 
 # Selecting properties
 $Groups = $GroupsRaw | Select-Object Name, ADSyncDisabled, NewGroupCreated, ExternalDirectoryObjectID, ManagedBy, Alias, BccBlocked, Description, DisplayName, HiddenGroupMembershipEnabled, PrimarySmtpAddress, WindowsEmailAddress, MailTip, RequireSenderAuthenticationEnabled, RoomList, GroupType, EmailAddresses, GrantSendOnBehalf, HiddenFromAddressListsEnabled, Members
-
+ 
 Write-Output "Group count: $($Groups.Count)"
-
+ 
 # Adding all group members with their email address and changing the ManagedBy object to comma seperated string
 Write-Output "Optimizing properties Members and ManagedBy..."
+ 
 $Groups | ForEach-Object {
     # Deleted group members dont return the primarysmtpaddress but the WindowsLiveID
-    $GroupMembers = (Get-DistributionGroupMember -Identity $_.Alias).WindowsLiveID
-    $_.Members = ($GroupMembers | Where-Object { $_ -ne "" }) -split -join ","
-
-    $_.ManagedBy = ($_.ManagedBy | Where-Object { $_ -ne "Organization Management" }) -split -join ","
+    $GroupMembers = (Get-DistributionGroupMember -Identity $_.Alias).Alias
+    $_.Members = if ($GroupMembers.count -ne 0) { ($GroupMembers | Where-Object { $_ -ne "" }) -split -join "," }else { $null }
+    $_.ManagedBy = ($_.ManagedBy | Where-Object { $_ -ne "Organization Management" })
 }
-
+ 
 # Export all groups as backup
-Write-Output "Exporting group data to CSV..."
-$Path = "$env:USERPROFILE\Group-Export-$(Get-Date -Format 'yyyyMMdd_HHmm_ss').csv"
-$Groups | Export-Csv -Path $Path -ErrorAction Stop -Delimiter ',' -NoTypeInformation
-
+$Path = "$env:USERPROFILE\Group-Export-$(Get-Date -Format 'yyyyMMdd_HHmm_ss').json"
+Write-Output "Exporting group data as Json to $Path"
+$Groups | ConvertTo-Json | Out-File $Path -ErrorAction Stop
+ 
 # If the export didnt work, the script is stopped
 if (-not (Test-Path -Path $Path)) {
     exit
@@ -74,42 +81,52 @@ if (-not (Test-Path -Path $Path)) {
 else {
     Write-Output "Groups successfully exported as CSV to $Path"
 }
-
+ 
 # Removing groups from sync
 $Groups | ForEach-Object {
     $Group = $_
+    $Primary = $Group.PrimarySmtpAddress
     try {
-        Set-ADGroup -Identity $_.Alias -Add @{"$NoSyncAttribute" = $NoSyncValue }
+        Get-ADGroup -Filter { mail -eq $Primary } -Properties * | Set-ADGroup -Add @{"$NoSyncAttribute" = $NoSyncValue }
         Write-Output "$($_.PrimarySmtpAddress): AD Sync disabled"
         $_.ADSyncDisabled = "Yes"
-        continue
+        return
     }
     catch {
         Write-Warning "$($Group.PrimarySmtpAddress): AD Sync not disabled due to error"
-        $_       
+        $_
     }
-    $_.ADSyncDisabled = "Error"
+            $_.ADSyncDisabled = "Error"
+ 
 }
-
+ 
 # Starting Sync Cycle
 Invoke-Command -ComputerName $EntraConnectServer  -Authentication Kerberos -ScriptBlock { Start-ADSyncSyncCycle -PolicyType Delta }
+# Check if sync is done by checking if the object doesnt exist in Entra ID anymore
+ 
 Start-Sleep -Seconds 120
-
+ 
+ 
 # Adding new groups
 Write-Output "Creating new groups in Exchange Online..."
 $Groups | ForEach-Object {
-    Write-Output "$($_.PrimarySmtpAddress): Creating new group..."
-
+    # Skip groups without members
+    if ($_.Members -eq $null) { 
+        Write-Output "$($_.PrimarySmtpAddress): No members found in group. Skipping..."
+        #return
+    }
+ 
+    Write-Output "$($_.PrimarySmtpAddress): Creating group $($_.PrimarySmtpAddress) in Exchange Online..."
+ 
     # Only run on group where the sync was disabled
     if ($_.ADSyncDisabled -ne "Yes") { 
-        continue 
+        #return 
     }
     # Only run when the group currently does not exist
     if (Get-DistributionGroup -Identity $_.Alias) {
         Write-Warning "$($_.PrimarySmtpAddress): Exists in Exchange Online"
-        continue
+        return
     }
-    
     try {
         $NewGroup = @{
             Confirm                            = $false
@@ -120,7 +137,7 @@ $Groups | ForEach-Object {
             DisplayName                        = $_.DisplayName
             HiddenGroupMembershipEnabled       = $_.HiddenGroupMembershipEnabled
             #IgnoreNamingPolicy = 
-            ManagedBy                          = if ([string]::IsNullOrEmpty($_.ManagedBy)) { "sa_globaladmin_backdoor@myshe.onmicrosoft.com" }else { $_.ManagedBy }
+            ManagedBy                          = $DefaultManagedBy
             #MemberDepartRestriction = 
             #MemberJoinRestriction = 
             Members                            = $_.Members
@@ -132,12 +149,12 @@ $Groups | ForEach-Object {
             RequireSenderAuthenticationEnabled = $_.RequireSenderAuthenticationEnabled
             RoomList                           = $_.RoomList
             #SendModerationNotifications = 
-            Type                               = if ($_.GroupType -contains "SecurityEnabled") {"Security"}else { "Distribution" }
+            Type                               = "Security"
         }
         New-DistributionGroup @NewGroup | Out-Null
         Write-Output "$($_.PrimarySmtpAddress): Group successfully created in Exchange Online"
         $_.NewGroupCreated = "Yes"
-        continue
+        return
     }
     catch {
         Write-Warning "Error occured while creating group with the following values $NewGroup"
@@ -145,17 +162,20 @@ $Groups | ForEach-Object {
     }
     $_.NewGroupCreated = "Error"
 }
-
+ 
+ 
 # Adding additional email addreses that are not the primarysmtpaddress
 $Groups | ForEach-Object {
     # Only run on group where the sync was disabled
     if ($_.NewGroupCreated -ne "Yes") { 
-        continue 
+        Write-Output "$($_.PrimarySmtpAddress): New group was not created. Skipping..."
     }
-    $Group = $_
-    $EmailAddressesCleaned = ($Group.EmailAddresses | Where-Object { $_ -match "SMTP:" }) -split -join ","  #| Where-Object { $_ -notmatch $Group.PrimarySmtpAddress } 
-    
-    Set-DistributionGroup -Identity $Group.Alias -EmailAddresses $EmailAddressesCleaned
-    Write-Output "$($_.PrimarySmtpAddress): Added following email addresses: $EmailAddressesCleaned"
+    else {
+        $Group = $_
+        $EmailAddressesCleaned = ($Group.EmailAddresses | Where-Object { $_ -match "SMTP:" }) -split -join ","  #| Where-Object { $_ -notmatch $Group.PrimarySmtpAddress }
+ 
+        Set-DistributionGroup -Identity $Group.Alias -EmailAddresses $EmailAddressesCleaned -Mailtip $Group.MailTip -BypassSecurityGroupManagerCheck
+        Write-Output "$($_.PrimarySmtpAddress): Added following email addresses: $EmailAddressesCleaned"
+    }
 }
 #endregion

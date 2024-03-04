@@ -14,7 +14,7 @@
 .NOTES
     File Name      : Sync-UserCert.ps1
     Version        : 1.0
-    Author         : Tobias Schüle
+    Author         : Tobias Schüle - https://justinn.io
     Prerequisite   : Windows PowerShell v5.x, PSPKI
 #>
 
