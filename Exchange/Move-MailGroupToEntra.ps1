@@ -23,7 +23,7 @@ $NoSyncValue = "NoSync"
  
 # Which group types to migrate
 # MailUniversalDistributionGroup, MailUniversalSecurityGroup
-$RecipientTypeDetails = "MailUniversalSecurityGroup"
+$RecipientTypeDetails = "MailUniversal"
 
 # Default Managed By
 $DefaultManagedBy = "ManagedBy"
