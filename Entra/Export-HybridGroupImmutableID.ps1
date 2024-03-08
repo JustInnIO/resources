@@ -1,9 +1,9 @@
 # Description: Export Hybrid Group Immutable ID
 
-$dn = "DC=she,DC=local"
+$outputCSV = "C:\temp\groups.csv"
 
 $defaultProperties = @('samAccountName', 'distinguishedName', 'objectGUID', 'mS-DS-ConsistencyGuid')
-$Groups = Get-ADGroup -Filter "DistinguishedName -contains '$dn'" -Properties $defaultProperties -ErrorAction Stop
+$Groups = Get-ADGroup -Filter * -Properties $defaultProperties -ErrorAction Stop
 $results = @()
 if ($Groups -eq $null) {
        Write-Error "Groups not found"
