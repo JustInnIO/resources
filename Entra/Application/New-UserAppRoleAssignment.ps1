@@ -26,6 +26,7 @@ $Permissions = @(
     # SharePoint
     "Sites.Selected"
     # Mail send OPTIONAL
+    # Check https://learn.microsoft.com/en-us/graph/auth-limit-mailbox-access for more infos
     # "Mail.Send"
 )
 
