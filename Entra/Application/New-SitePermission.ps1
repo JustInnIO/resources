@@ -26,7 +26,7 @@ Import-Module Microsoft.Graph.Applications
 Connect-MgGraph -Scope "Sites.FullControl.All", "Application.ReadWrite.All"
 
 # Getting the ID of the Managed Identity with the DisplayName
-$ManagedIdentityID = (Get-MgServicePrincipal -Filter "displayName eq '$ManagedIdentityDisplayName'" -All).Id
+$ManagedIdentityID = (Get-MgServicePrincipal -Filter "displayName eq '$ManagedIdentityDisplayName'" -All).AppId
 
 $params = @{
 	roles               = @(
