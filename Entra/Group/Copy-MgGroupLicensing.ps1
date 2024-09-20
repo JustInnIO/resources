@@ -14,22 +14,22 @@ function Copy-GroupLicenses {
         [string]$destinationGroupId
     )
 
-    $sourceLicenses = Get-MgGroup -GroupId $sourceGroupId -Property "AssignedLicenses" | Select-Object -ExpandProperty AssignedLicenses
+    $sourceLicenses = Get-MgGroup -GroupId $sourceGroupId -Property 'AssignedLicenses' | Select-Object -ExpandProperty AssignedLicenses
     if ($null -eq $sourceLicenses -or $sourceLicenses.Count -eq 0) {
-        Write-Host "No licenses found for the source group."
+        Write-Host 'No licenses found for the source group.'
         return
     }
 
     foreach ($license in $sourceLicenses) {
         try {
             $licenseToAdd = @{
-                "addLicenses"    = @(
+                'addLicenses'    = @(
                     @{
-                        "disabledPlans" = $license.DisabledPlans;
-                        "skuId"         = $license.SkuId
+                        'disabledPlans' = $license.DisabledPlans
+                        'skuId'         = $license.SkuId
                     }
-                );
-                "removeLicenses" = @()
+                )
+                'removeLicenses' = @()
             }
 
             Set-MgGroupLicense -GroupId $destinationGroupId -BodyParameter $licenseToAdd

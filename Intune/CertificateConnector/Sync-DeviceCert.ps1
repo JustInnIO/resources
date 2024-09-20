@@ -24,22 +24,22 @@
 #>
 
 # Only get certs from CA requested by the following user
-$RequesterName = "PLACEHOLDER\Intune-NDES"
+$RequesterName = 'PLACEHOLDER\Intune-NDES'
 
 # App registration Info for connection
-$TenantId = "PLACEHOLDER"
-$ClientId = "PLACEHOLDER"
-$ClientSecret = "PLACEHOLDER"
+$TenantId = 'PLACEHOLDER'
+$ClientId = 'PLACEHOLDER'
+$ClientSecret = 'PLACEHOLDER'
 
 # Set the OU for computer object creation
-$orgUnit = "OU=AADDeviceSync,DC=justinn,DC=io"
+$orgUnit = 'OU=AADDeviceSync,DC=justinn,DC=io'
 
 
-$transcriptfile = ".\Transcript-CertSync-Devices\Sync-" + (Get-Date -UFormat %Y-%m-%d-%H-%M-%S) + ".txt"
+$transcriptfile = '.\Transcript-CertSync-Devices\Sync-' + (Get-Date -UFormat %Y-%m-%d-%H-%M-%S) + '.txt'
 Start-Transcript -Path $transcriptfile
 
 # Removes old log files
-Get-ChildItem –Path ".\Transcript-CertSync-Devices\" -Recurse | Where-Object { ($_.LastWriteTime -lt (Get-Date).AddDays(-7)) } | Remove-Item
+Get-ChildItem –Path '.\Transcript-CertSync-Devices\' -Recurse | Where-Object { ($_.LastWriteTime -lt (Get-Date).AddDays(-7)) } | Remove-Item
 
 # Import PKI Module
 Import-Module PSPKI
@@ -51,7 +51,7 @@ Connect-MSGraphApp -Tenant $TenantId -AppId $ClientId -AppSecret $ClientSecret
 $AutopilotDevices = Get-AutopilotDevice | Select-Object azureActiveDirectoryDeviceId, managedDeviceId, enrollmentState
 
 # Only sync enrolled devices
-$AutopilotDevices = $AutopilotDevices | Where-Object { $_.enrollmentState -eq "enrolled" }
+$AutopilotDevices = $AutopilotDevices | Where-Object { $_.enrollmentState -eq 'enrolled' }
 
 # AutoPilot Devices with Cert
 foreach ( $CAHost in (Get-CertificationAuthority).ComputerName) {
@@ -59,14 +59,14 @@ foreach ( $CAHost in (Get-CertificationAuthority).ComputerName) {
 }
 
 # Create new Autopilot device objects in AD while skipping already existing computer objects and updates the description
-Write-Output "Creating new dummy computer objects if necessary..."
+Write-Output 'Creating new dummy computer objects if necessary...'
 foreach ($Device in $AutopilotDevices) {
     $DeviceName = (Invoke-MSGraphRequest -Url "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/$($Device.managedDeviceId)" -HttpMethod Get).DeviceName
     if ($ADComputer = Get-ADComputer -Properties * -Filter "Name -eq ""$($Device.azureActiveDirectoryDeviceId)""" -SearchBase $orgUnit -ErrorAction SilentlyContinue) {
         # Changes the description if it doesnt include the current device name
         if ($ADComputer.Description -notmatch $DeviceName) {
             Set-ADComputer -Description $DeviceName -Identity $ADComputer.SAMAccountName -Confirm:$False
-            Write-Output "Changed deviceName in Description"
+            Write-Output 'Changed deviceName in Description'
         }
         else {
             Write-Output "Skipping $($Device.azureActiveDirectoryDeviceId) because it already exists with the correct information."
@@ -81,7 +81,7 @@ foreach ($Device in $AutopilotDevices) {
                 Write-Output "Computer object created. ($($Device.azureActiveDirectoryDeviceId))"
             }
             catch {
-                Write-Error "Error. Skipping computer object creation."
+                Write-Error 'Error. Skipping computer object creation.'
             }
         }
         else {
@@ -99,9 +99,9 @@ foreach ($DummyDevice in $DummyDevices) {
         # Write-Output "$($DummyDevice.Name) exists in Autopilot."
     }
     else {
-        if ($DummyDevice.Description -ne "ToDelete") {
+        if ($DummyDevice.Description -ne 'ToDelete') {
             Write-Output "$($DummyDevice.Name) does not exist in Autopilot. Adding info to description..."
-            Set-ADComputer -Description "ToDelete" -Identity $DummyDevice.SAMAccountName -Confirm:$False
+            Set-ADComputer -Description 'ToDelete' -Identity $DummyDevice.SAMAccountName -Confirm:$False
         }
     }
    
@@ -109,7 +109,7 @@ foreach ($DummyDevice in $DummyDevices) {
 
 ### CERT SYNC
 
-Write-Output "Starting certificate sync..."
+Write-Output 'Starting certificate sync...'
 Clear-Variable IssuedCerts -ErrorAction SilentlyContinue
 try {
     foreach ($CAHost in (Get-CertificationAuthority).ComputerName) {
@@ -119,12 +119,12 @@ try {
         $IssuedRaw = Get-IssuedRequest -Filter "Request.RequesterName -eq $RequesterName" -CertificationAuthority $CAHost -Property RequestID, ConfigString, CommonName, CertificateHash, RawCertificate
 
         $IssuedCerts += $IssuedRaw | Select-Object -Property RequestID, ConfigString, CommonName, CertificateHash, @{
-            name       = 'SANPrincipalName';
+            name       = 'SANPrincipalName'
             expression = {
                 ($(New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @(, [Convert]::FromBase64String($_.RawCertificate))).Extensions | `
-                    Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).Format(0) -match "^(.*)(Principal Name=)([^,]*)(,?)(.*)$" | Out-Null;
-                if ($matches.GetEnumerator() | Where-Object Value -eq "Principal Name=") {
-                    $n = ($matches.GetEnumerator() | Where-Object Value -eq "Principal Name=").Name + 1;
+                    Where-Object { $_.Oid.FriendlyName -eq 'Subject Alternative Name' }).Format(0) -match '^(.*)(Principal Name=)([^,]*)(,?)(.*)$' | Out-Null
+                if ($matches.GetEnumerator() | Where-Object Value -EQ 'Principal Name=') {
+                    $n = ($matches.GetEnumerator() | Where-Object Value -EQ 'Principal Name=').Name + 1
                     $matches[$n]
                 }
             }
@@ -133,18 +133,18 @@ try {
 }
 catch {
     Write-Output "Error - $($_.Exception.Message)" 
-    Write-Output "<CERT> Error getting issued certificates from ADCS servers"
+    Write-Output '<CERT> Error getting issued certificates from ADCS servers'
 }
 try { 
-    Write-Output "<CERT> Getting AD objects..."
+    Write-Output '<CERT> Getting AD objects...'
     $AADx509Devs = Get-ADComputer -Filter '(objectClass -eq "computer")' -SearchBase $orgUnit -Property Name, altSecurityIdentities
 }
 catch {  
     Write-Output "$($_.Exception.Message)" 
-    Write-Output  "<CERT> Error getting AADx509 computers for hash sync"
+    Write-Output '<CERT> Error getting AADx509 computers for hash sync'
 }
 
-Write-Output "<CERT> Writing certs to computer objects..."
+Write-Output '<CERT> Writing certs to computer objects...'
 foreach ($dev in $AADx509Devs) {
     $certs = $IssuedCerts | Where-Object SANPrincipalName -Like "host/$($dev.Name)"
     if ($certs) {
@@ -159,7 +159,7 @@ foreach ($dev in $AADx509Devs) {
         try {
             if (!((-Join $dev.altSecurityIdentities) -eq (-Join $a))) {
                 [Array]::Reverse($a)
-                $ht = @{"altSecurityIdentities" = $a }
+                $ht = @{'altSecurityIdentities' = $a }
                 Write-Output "<CERT> Mapping AADx509 computer '$($dev.Name)' to (CA-RequestID) SHA1-hash '$($b -Join ',')'"
                 Get-ADComputer -Filter "(servicePrincipalName -like 'host/$($dev.Name)')" | Set-ADComputer -Add $ht
             }
@@ -171,6 +171,6 @@ foreach ($dev in $AADx509Devs) {
     }
 }
 
-Write-Output "<CERT> Certificate sync completed"
+Write-Output '<CERT> Certificate sync completed'
 
 Stop-Transcript

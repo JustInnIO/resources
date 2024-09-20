@@ -1,4 +1,4 @@
-$SourceDomainDN = "dc=justinn,=dc=io"
+$SourceDomainDN = 'dc=justinn,=dc=io'
  
 # Install Graph Module if missing
 if (-not (Get-Command Connect-MgGraph -ErrorAction SilentlyContinue)) {
@@ -7,7 +7,7 @@ if (-not (Get-Command Connect-MgGraph -ErrorAction SilentlyContinue)) {
  
 # Connect to MgGraph if not connected
 if ($null -eq (Get-MgContext)) {
-    Connect-MgGraph -Scopes "User.Read.All", "User.ReadWrite.All"
+    Connect-MgGraph -Scopes 'User.Read.All', 'User.ReadWrite.All'
 }
  
 $Users = Get-MgUser -Property ID, UserPrincipalName, OnPremisesDistinguishedName, OnPremisesImmutableId, proxyAddresses, UsageLocation, OnPremisesSamAccountName -All 
@@ -32,4 +32,4 @@ $Users | ForEach-Object {
     }
 }
  
-Write-Output "Following users were not found in AD:"
+Write-Output 'Following users were not found in AD:'

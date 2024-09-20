@@ -2,9 +2,9 @@
 Connect-MgGraph
 
 # Get all users from Graph with Immutable ID
-$Users = Get-MgUser -All  -property id, onpremisessamaccountname, OnPremisesImmutableId, mail, UserPrincipalName -ConsistencyLevel eventual | Select-Object id, onpremisessamaccountname, OnPremisesImmutableId, mail, UserPrincipalName
+$Users = Get-MgUser -All -Property id, onpremisessamaccountname, OnPremisesImmutableId, mail, UserPrincipalName -ConsistencyLevel eventual | Select-Object id, onpremisessamaccountname, OnPremisesImmutableId, mail, UserPrincipalName
 
-$Users | ForEach-object {
+$Users | ForEach-Object {
     $_.OnPremisesImmutableId = ([system.convert]::FromBase64String("$($_.OnPremisesImmutableId)")) 
 }
 

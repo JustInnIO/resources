@@ -1,10 +1,10 @@
 # Managed Identity
 # Please change this value to the managed identity you want to assign the permission to.
-$ManagedIdentityDisplayName = "UserManagedIdentity"
+$ManagedIdentityDisplayName = 'UserManagedIdentity'
 
 # SharePoint Site ID
 # You can find out the ID by addint the following text behind the site url /_api/site/id?
-$SharePointSiteID = "b2f2635b-692b-44ff-bd0c-0f1cabfdd5db"
+$SharePointSiteID = 'b2f2635b-692b-44ff-bd0c-0f1cabfdd5db'
 
 # Import required modules
 if (-not (Get-Command Connect-MgGraph -ErrorAction SilentlyContinue)) {
@@ -23,14 +23,14 @@ Import-Module Microsoft.Graph.Sites
 Import-Module Microsoft.Graph.Applications
 
 # Connect to Graph with the required permissions
-Connect-MgGraph -Scope "Sites.FullControl.All", "Application.ReadWrite.All"
+Connect-MgGraph -Scope 'Sites.FullControl.All', 'Application.ReadWrite.All'
 
 # Getting the ID of the Managed Identity with the DisplayName
 $ManagedIdentityID = (Get-MgServicePrincipal -Filter "displayName eq '$ManagedIdentityDisplayName'" -All).AppId
 
 $params = @{
 	roles               = @(
-		"write"
+		'write'
 	)
 	grantedToIdentities = @(
 		@{
@@ -42,4 +42,4 @@ $params = @{
 	)
 }
 
-New-MgSitePermission -SiteId $SharePointSiteID  -BodyParameter $params
+New-MgSitePermission -SiteId $SharePointSiteID -BodyParameter $params -ErrorAction Stop
